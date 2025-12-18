@@ -34,6 +34,52 @@ impl Color {
     pub fn new(r: f64, g: f64, b: f64, a: f64) -> Self {
         Self { r, g, b, a }
     }
+
+    /// Creates a new color from HSV (Hue, Saturation, Value) color space.
+    ///
+    /// # Arguments
+    /// * `h` - Hue in degrees (0.0 to 360.0), wraps around
+    /// * `s` - Saturation (0.0 to 1.0)
+    /// * `v` - Value/brightness (0.0 to 1.0)
+    /// * `a` - Alpha/transparency (0.0 to 1.0)
+    ///
+    /// # Examples
+    /// ```
+    /// use wayscriber::draw::Color;
+    /// let red = Color::from_hsv(0.0, 1.0, 1.0, 1.0);
+    /// let green = Color::from_hsv(120.0, 1.0, 1.0, 1.0);
+    /// let blue = Color::from_hsv(240.0, 1.0, 1.0, 1.0);
+    /// ```
+    pub fn from_hsv(h: f64, s: f64, v: f64, a: f64) -> Self {
+        let s = s.clamp(0.0, 1.0);
+        let v = v.clamp(0.0, 1.0);
+
+        let c = v * s;
+        let h_prime = (h % 360.0) / 60.0;
+        let x = c * (1.0 - ((h_prime % 2.0) - 1.0).abs());
+        let m = v - c;
+
+        let (r, g, b) = if h_prime < 1.0 {
+            (c, x, 0.0)
+        } else if h_prime < 2.0 {
+            (x, c, 0.0)
+        } else if h_prime < 3.0 {
+            (0.0, c, x)
+        } else if h_prime < 4.0 {
+            (0.0, x, c)
+        } else if h_prime < 5.0 {
+            (x, 0.0, c)
+        } else {
+            (c, 0.0, x)
+        };
+
+        Self {
+            r: r + m,
+            g: g + m,
+            b: b + m,
+            a: a.clamp(0.0, 1.0),
+        }
+    }
 }
 
 // ============================================================================

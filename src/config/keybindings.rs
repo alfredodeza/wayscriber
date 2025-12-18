@@ -60,6 +60,7 @@ pub enum Action {
     ToggleToolbar,
     ToggleHighlightTool,
     ToggleFill,
+    ToggleRainbowMode,
     OpenContextMenu,
 
     // Configurator
@@ -298,6 +299,9 @@ pub struct KeybindingsConfig {
     #[serde(default = "default_toggle_fill")]
     pub toggle_fill: Vec<String>,
 
+    #[serde(default = "default_toggle_rainbow_mode")]
+    pub toggle_rainbow_mode: Vec<String>,
+
     #[serde(default = "default_toggle_highlight_tool")]
     pub toggle_highlight_tool: Vec<String>,
     #[serde(default = "default_open_context_menu")]
@@ -403,6 +407,7 @@ impl Default for KeybindingsConfig {
             toggle_click_highlight: default_toggle_click_highlight(),
             toggle_toolbar: default_toggle_toolbar(),
             toggle_fill: default_toggle_fill(),
+            toggle_rainbow_mode: default_toggle_rainbow_mode(),
             toggle_highlight_tool: default_toggle_highlight_tool(),
             open_context_menu: default_open_context_menu(),
             open_configurator: default_open_configurator(),
@@ -622,6 +627,10 @@ impl KeybindingsConfig {
 
         for binding_str in &self.toggle_fill {
             insert_binding(binding_str, Action::ToggleFill)?;
+        }
+
+        for binding_str in &self.toggle_rainbow_mode {
+            insert_binding(binding_str, Action::ToggleRainbowMode)?;
         }
 
         for binding_str in &self.toggle_highlight_tool {
@@ -854,6 +863,10 @@ fn default_toggle_toolbar() -> Vec<String> {
 
 fn default_toggle_fill() -> Vec<String> {
     Vec::new()
+}
+
+fn default_toggle_rainbow_mode() -> Vec<String> {
+    vec!["Ctrl+Shift+R".to_string()]
 }
 
 fn default_toggle_highlight_tool() -> Vec<String> {

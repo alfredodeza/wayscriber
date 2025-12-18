@@ -37,6 +37,7 @@ impl InputState {
                     points: points.clone(), // TODO: Consider using Cow or separate borrow API
                     color: self.current_color,
                     thick: self.current_thickness,
+                    per_point_colors: None,
                 }),
                 Tool::Line => Some(Shape::Line {
                     x1: *start_x,
@@ -95,6 +96,7 @@ impl InputState {
                     points: points.clone(),
                     color: self.marker_color(),
                     thick: self.current_thickness,
+                    per_point_colors: None,
                 }),
                 Tool::Eraser => None, // Preview handled separately to avoid clearing the buffer
                 Tool::Highlight => None,
@@ -134,21 +136,41 @@ impl InputState {
             match tool {
                 Tool::Pen => {
                     // Render freehand without cloning - just borrow the points
+                    let colors = if self.rainbow_mode_enabled {
+                        Some(self.generate_rainbow_colors_for_points(points))
+                    } else {
+                        None
+                    };
                     render_freehand_borrowed(
                         ctx,
                         points,
                         self.current_color,
                         self.current_thickness,
+                        colors.as_deref(),
                     );
                     true
                 }
                 Tool::Highlight => false,
                 Tool::Marker => {
+                    let colors = if self.rainbow_mode_enabled {
+                        Some(
+                            self.generate_rainbow_colors_for_points(points)
+                                .into_iter()
+                                .map(|mut c| {
+                                    c.a = self.marker_opacity;
+                                    c
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                    } else {
+                        None
+                    };
                     render_marker_stroke_borrowed(
                         ctx,
                         points,
                         self.marker_color(),
                         self.current_thickness,
+                        colors.as_deref(),
                     );
                     true
                 }
@@ -160,7 +182,7 @@ impl InputState {
                         b: 1.0,
                         a: 0.35,
                     };
-                    render_freehand_borrowed(ctx, points, preview_color, self.eraser_size);
+                    render_freehand_borrowed(ctx, points, preview_color, self.eraser_size, None);
                     true
                 }
                 _ => {

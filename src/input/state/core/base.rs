@@ -63,6 +63,12 @@ pub struct InputState {
     pub canvas_set: CanvasSet,
     /// Current drawing color (changed with color keys: R, G, B, etc.)
     pub current_color: Color,
+    /// Whether rainbow mode is enabled for drawing
+    pub rainbow_mode_enabled: bool,
+    /// Current hue value for rainbow mode (0.0 to 360.0)
+    pub(super) rainbow_hue: f64,
+    /// How much to increment hue per pixel of distance in rainbow mode
+    pub rainbow_hue_step_per_pixel: f64,
     /// Current pen/line thickness in pixels (changed with +/- keys)
     pub current_thickness: f64,
     /// Current eraser size in pixels
@@ -245,6 +251,9 @@ impl InputState {
         let mut state = Self {
             canvas_set: CanvasSet::new(),
             current_color: color,
+            rainbow_mode_enabled: false,
+            rainbow_hue: 0.0,
+            rainbow_hue_step_per_pixel: 0.1, // Default: increment hue by 0.15 degrees per pixel traveled
             current_thickness: thickness,
             eraser_size: clamped_eraser,
             eraser_kind: EraserKind::Circle,

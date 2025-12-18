@@ -208,4 +208,59 @@ impl InputState {
     pub fn toolbar_enter_text_mode(&mut self) {
         self.handle_action(Action::EnterTextMode);
     }
+
+    /// Toggles rainbow mode on or off. Returns true if changed.
+    pub fn toggle_rainbow_mode(&mut self) -> bool {
+        self.rainbow_mode_enabled = !self.rainbow_mode_enabled;
+        if self.rainbow_mode_enabled {
+            // Reset hue to start fresh
+            self.rainbow_hue = 0.0;
+        }
+        log::info!("Rainbow mode: {} (step: {})", self.rainbow_mode_enabled, self.rainbow_hue_step_per_pixel);
+        self.dirty_tracker.mark_full();
+        self.needs_redraw = true;
+        true
+    }
+
+    /// Generates a rainbow color for a given distance traveled.
+    /// Uses HSV color space with full saturation and value for vivid colors.
+    /// The distance parameter determines the hue progression for smooth, consistent coloring.
+    pub fn rainbow_color_at_distance(&self, distance: f64) -> Color {
+        let hue = (distance * self.rainbow_hue_step_per_pixel) % 360.0;
+        Color::from_hsv(hue, 1.0, 1.0, 1.0)
+    }
+
+    /// Generates colors for each point based on cumulative distance traveled.
+    pub fn generate_rainbow_colors_for_points(&self, points: &[(i32, i32)]) -> Vec<Color> {
+        if points.is_empty() {
+            return Vec::new();
+        }
+
+        let mut colors = Vec::with_capacity(points.len());
+        let mut cumulative_distance = 0.0;
+
+        // First point gets the starting hue
+        colors.push(self.rainbow_color_at_distance(cumulative_distance));
+
+        // For each subsequent point, calculate distance from previous point
+        for i in 1..points.len() {
+            let (x1, y1) = points[i - 1];
+            let (x2, y2) = points[i];
+            let dx = (x2 - x1) as f64;
+            let dy = (y2 - y1) as f64;
+            let distance = (dx * dx + dy * dy).sqrt();
+            cumulative_distance += distance;
+
+            colors.push(self.rainbow_color_at_distance(cumulative_distance));
+        }
+
+        log::debug!("Generated {} rainbow colors for {} points, total distance: {}",
+                    colors.len(), points.len(), cumulative_distance);
+        colors
+    }
+
+    /// Returns whether rainbow mode is currently enabled.
+    pub fn is_rainbow_mode_enabled(&self) -> bool {
+        self.rainbow_mode_enabled
+    }
 }

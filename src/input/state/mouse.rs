@@ -238,11 +238,19 @@ impl InputState {
                 points,
             } => {
                 let shape = match tool {
-                    Tool::Pen => Shape::Freehand {
-                        points,
-                        color: self.current_color,
-                        thick: self.current_thickness,
-                    },
+                    Tool::Pen => {
+                        let per_point_colors = if self.rainbow_mode_enabled {
+                            Some(self.generate_rainbow_colors_for_points(&points))
+                        } else {
+                            None
+                        };
+                        Shape::Freehand {
+                            points,
+                            color: self.current_color,
+                            thick: self.current_thickness,
+                            per_point_colors,
+                        }
+                    }
                     Tool::Line => Shape::Line {
                         x1: start_x,
                         y1: start_y,
@@ -294,11 +302,28 @@ impl InputState {
                         arrow_length: self.arrow_length,
                         arrow_angle: self.arrow_angle,
                     },
-                    Tool::Marker => Shape::MarkerStroke {
-                        points,
-                        color: self.marker_color(),
-                        thick: self.current_thickness,
-                    },
+                    Tool::Marker => {
+                        let per_point_colors = if self.rainbow_mode_enabled {
+                            Some(
+                                self.generate_rainbow_colors_for_points(&points)
+                                    .into_iter()
+                                    .map(|mut c| {
+                                        // Apply marker opacity to rainbow colors
+                                        c.a = self.marker_opacity;
+                                        c
+                                    })
+                                    .collect::<Vec<_>>(),
+                            )
+                        } else {
+                            None
+                        };
+                        Shape::MarkerStroke {
+                            points,
+                            color: self.marker_color(),
+                            thick: self.current_thickness,
+                            per_point_colors,
+                        }
+                    }
                     Tool::Eraser => Shape::EraserStroke {
                         points,
                         brush: crate::draw::shape::EraserBrush {

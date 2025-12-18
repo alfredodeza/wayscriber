@@ -35,6 +35,9 @@ pub enum Shape {
         color: Color,
         /// Line thickness in pixels
         thick: f64,
+        /// Optional per-point colors for rainbow/gradient effects (if Some, overrides color field)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        per_point_colors: Option<Vec<Color>>,
     },
     /// Straight line between two points (drawn with Shift modifier)
     Line {
@@ -129,6 +132,9 @@ pub enum Shape {
         color: Color,
         /// Stroke thickness in pixels
         thick: f64,
+        /// Optional per-point colors for rainbow/gradient effects (if Some, overrides color field)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        per_point_colors: Option<Vec<Color>>,
     },
     /// Eraser stroke that punches holes in the canvas
     EraserStroke {
@@ -451,6 +457,7 @@ mod tests {
             points: vec![(10, 20), (30, 40)],
             color: WHITE,
             thick: 6.0,
+            per_point_colors: None,
         };
 
         let rect = shape.bounding_box().expect("freehand should have bounds");

@@ -75,7 +75,7 @@ pub fn render_selection_halo(ctx: &cairo::Context, drawn: &DrawnShape) {
     let _ = ctx.save();
     match &drawn.shape {
         Shape::Freehand { points, thick, .. } => {
-            render_freehand_borrowed(ctx, points, glow, thick + outline_width);
+            render_freehand_borrowed(ctx, points, glow, thick + outline_width, None);
         }
         Shape::Line {
             x1,
@@ -132,11 +132,11 @@ pub fn render_selection_halo(ctx: &cairo::Context, drawn: &DrawnShape) {
             );
         }
         Shape::MarkerStroke { points, thick, .. } => {
-            render_freehand_borrowed(ctx, points, glow, thick + outline_width);
+            render_freehand_borrowed(ctx, points, glow, thick + outline_width, None);
         }
         Shape::EraserStroke { points, brush } => {
             let outline = brush.size + outline_width;
-            render_freehand_borrowed(ctx, points, glow, outline);
+            render_freehand_borrowed(ctx, points, glow, outline, None);
         }
         Shape::Text { .. } => {
             if let Some(bounds) = drawn.shape.bounding_box() {
@@ -172,8 +172,9 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
             points,
             color,
             thick,
+            per_point_colors,
         } => {
-            render_freehand_borrowed(ctx, points, *color, *thick);
+            render_freehand_borrowed(ctx, points, *color, *thick, per_point_colors.as_deref());
         }
         Shape::Line {
             x1,
@@ -253,8 +254,9 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
             points,
             color,
             thick,
+            per_point_colors,
         } => {
-            render_marker_stroke_borrowed(ctx, points, *color, *thick);
+            render_marker_stroke_borrowed(ctx, points, *color, *thick, per_point_colors.as_deref());
         }
         Shape::EraserStroke { .. } => {
             // Eraser strokes require an eraser replay context; ignore in generic rendering.
@@ -312,20 +314,53 @@ pub fn render_click_highlight(
 ///
 /// This function accepts a borrowed slice, avoiding clones for better performance.
 /// Use this for rendering provisional shapes during drawing to prevent quadratic behavior.
+/// If per_point_colors is Some, each segment will be rendered with its own color (rainbow effect).
 pub fn render_freehand_borrowed(
     ctx: &cairo::Context,
     points: &[(i32, i32)],
     color: Color,
     thick: f64,
+    per_point_colors: Option<&[Color]>,
 ) {
     if points.is_empty() {
         return;
     }
 
-    ctx.set_source_rgba(color.r, color.g, color.b, color.a);
     ctx.set_line_width(thick);
     ctx.set_line_cap(cairo::LineCap::Round);
     ctx.set_line_join(cairo::LineJoin::Round);
+
+    // If we have per-point colors, render each segment with a gradient
+    if let Some(colors) = per_point_colors {
+        if colors.len() == points.len() && points.len() > 1 {
+            log::debug!("Rendering freehand with {} rainbow gradient segments", points.len() - 1);
+            for i in 0..points.len() - 1 {
+                let (x0, y0) = points[i];
+                let (x1, y1) = points[i + 1];
+                let c0 = colors[i];
+                let c1 = colors[i + 1];
+
+                // Create a linear gradient from start point to end point
+                let gradient = cairo::LinearGradient::new(
+                    x0 as f64,
+                    y0 as f64,
+                    x1 as f64,
+                    y1 as f64,
+                );
+                gradient.add_color_stop_rgba(0.0, c0.r, c0.g, c0.b, c0.a);
+                gradient.add_color_stop_rgba(1.0, c1.r, c1.g, c1.b, c1.a);
+
+                let _ = ctx.set_source(&gradient);
+                ctx.move_to(x0 as f64, y0 as f64);
+                ctx.line_to(x1 as f64, y1 as f64);
+                let _ = ctx.stroke();
+            }
+            return;
+        }
+    }
+
+    // Default rendering with single color
+    ctx.set_source_rgba(color.r, color.g, color.b, color.a);
 
     // Start at first point
     let (x0, y0) = points[0];
@@ -400,19 +435,75 @@ fn render_eraser_stroke(
 }
 
 /// Render a marker stroke with soft edges and screen blending to mimic a physical highlighter.
+/// If per_point_colors is Some, each segment will be rendered with its own color (rainbow effect).
 pub fn render_marker_stroke_borrowed(
     ctx: &cairo::Context,
     points: &[(i32, i32)],
     color: Color,
     thick: f64,
+    per_point_colors: Option<&[Color]>,
 ) {
     if points.is_empty() {
         return;
     }
 
-    // Reduce opacity to keep underlying text visible; clamp to avoid invisible strokes.
-    let base_alpha = (color.a * 0.32).clamp(0.05, 0.85);
     let soft_width = (thick * 1.25).max(thick + 1.0);
+
+    ctx.save().ok();
+    ctx.set_operator(cairo::Operator::Screen);
+
+    // If we have per-point colors, render each segment with a gradient
+    if let Some(colors) = per_point_colors {
+        if colors.len() == points.len() && points.len() > 1 {
+            for i in 0..points.len() - 1 {
+                let (x0, y0) = points[i];
+                let (x1, y1) = points[i + 1];
+                let c0 = colors[i];
+                let c1 = colors[i + 1];
+                let base_alpha_0 = (c0.a * 0.32).clamp(0.05, 0.85);
+                let base_alpha_1 = (c1.a * 0.32).clamp(0.05, 0.85);
+
+                // Create gradient for soft outer pass
+                let gradient_soft = cairo::LinearGradient::new(
+                    x0 as f64,
+                    y0 as f64,
+                    x1 as f64,
+                    y1 as f64,
+                );
+                gradient_soft.add_color_stop_rgba(0.0, c0.r, c0.g, c0.b, base_alpha_0 * 0.7);
+                gradient_soft.add_color_stop_rgba(1.0, c1.r, c1.g, c1.b, base_alpha_1 * 0.7);
+
+                let _ = ctx.set_source(&gradient_soft);
+                ctx.set_line_width(soft_width);
+                ctx.set_line_cap(cairo::LineCap::Round);
+                ctx.set_line_join(cairo::LineJoin::Round);
+                ctx.move_to(x0 as f64, y0 as f64);
+                ctx.line_to(x1 as f64, y1 as f64);
+                let _ = ctx.stroke();
+
+                // Create gradient for core pass
+                let gradient_core = cairo::LinearGradient::new(
+                    x0 as f64,
+                    y0 as f64,
+                    x1 as f64,
+                    y1 as f64,
+                );
+                gradient_core.add_color_stop_rgba(0.0, c0.r, c0.g, c0.b, base_alpha_0);
+                gradient_core.add_color_stop_rgba(1.0, c1.r, c1.g, c1.b, base_alpha_1);
+
+                let _ = ctx.set_source(&gradient_core);
+                ctx.set_line_width(thick);
+                ctx.move_to(x0 as f64, y0 as f64);
+                ctx.line_to(x1 as f64, y1 as f64);
+                let _ = ctx.stroke();
+            }
+            ctx.restore().ok();
+            return;
+        }
+    }
+
+    // Default rendering with single color
+    let base_alpha = (color.a * 0.32).clamp(0.05, 0.85);
 
     let draw_pass = |ctx: &cairo::Context, width: f64, alpha: f64| {
         ctx.set_source_rgba(color.r, color.g, color.b, alpha);
@@ -427,8 +518,6 @@ pub fn render_marker_stroke_borrowed(
         let _ = ctx.stroke();
     };
 
-    ctx.save().ok();
-    ctx.set_operator(cairo::Operator::Screen);
     // Soft outer pass for feathered edges
     draw_pass(ctx, soft_width, base_alpha * 0.7);
     // Core pass for body of the marker

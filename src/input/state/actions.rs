@@ -524,6 +524,15 @@ impl InputState {
                     info!("Fill {}", if enable { "enabled" } else { "disabled" });
                 }
             }
+            Action::ToggleRainbowMode => {
+                if self.toggle_rainbow_mode() {
+                    let enabled = self.is_rainbow_mode_enabled();
+                    info!(
+                        "Rainbow mode {}",
+                        if enabled { "enabled" } else { "disabled" }
+                    );
+                }
+            }
             Action::ToggleHighlightTool => {
                 let enabled = self.toggle_all_highlights();
                 let message = if enabled {
