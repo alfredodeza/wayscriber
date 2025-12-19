@@ -53,6 +53,12 @@ pub enum Shape {
         color: Color,
         /// Line thickness in pixels
         thick: f64,
+        /// Optional gradient start color (overrides color if present with end_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        start_color: Option<Color>,
+        /// Optional gradient end color (overrides color if present with start_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        end_color: Option<Color>,
     },
     /// Rectangle outline (drawn with Ctrl modifier)
     Rect {
@@ -70,6 +76,12 @@ pub enum Shape {
         color: Color,
         /// Border thickness in pixels
         thick: f64,
+        /// Optional gradient start color (top-left, overrides color if present with end_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        start_color: Option<Color>,
+        /// Optional gradient end color (bottom-right, overrides color if present with start_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        end_color: Option<Color>,
     },
     /// Ellipse/circle outline (drawn with Tab modifier)
     Ellipse {
@@ -87,6 +99,12 @@ pub enum Shape {
         color: Color,
         /// Border thickness in pixels
         thick: f64,
+        /// Optional gradient start color (left, overrides color if present with end_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        start_color: Option<Color>,
+        /// Optional gradient end color (right, overrides color if present with start_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        end_color: Option<Color>,
     },
     /// Arrow with directional head (drawn with Ctrl+Shift modifiers)
     Arrow {
@@ -106,6 +124,12 @@ pub enum Shape {
         arrow_length: f64,
         /// Arrowhead angle in degrees
         arrow_angle: f64,
+        /// Optional gradient start color (tail, overrides color if present with end_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        start_color: Option<Color>,
+        /// Optional gradient end color (head, overrides color if present with start_color)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        end_color: Option<Color>,
     },
     /// Text annotation (activated with 'T' key)
     Text {

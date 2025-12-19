@@ -392,6 +392,8 @@ impl WaylandBackend {
             config.history.custom_redo_delay_ms,
             config.history.custom_undo_steps,
             config.history.custom_redo_steps,
+            config.drawing.rainbow_hue_step_per_pixel,
+            config.drawing.default_rainbow_enabled,
         );
 
         input_state.set_hit_test_tolerance(config.drawing.hit_test_tolerance);

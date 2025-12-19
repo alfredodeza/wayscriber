@@ -39,14 +39,29 @@ impl InputState {
                     thick: self.current_thickness,
                     per_point_colors: None,
                 }),
-                Tool::Line => Some(Shape::Line {
-                    x1: *start_x,
-                    y1: *start_y,
-                    x2: current_x,
-                    y2: current_y,
-                    color: self.current_color,
-                    thick: self.current_thickness,
-                }),
+                Tool::Line => {
+                    let (start_color, end_color) = if self.rainbow_mode_enabled {
+                        let dx = (current_x - *start_x) as f64;
+                        let dy = (current_y - *start_y) as f64;
+                        let distance = (dx * dx + dy * dy).sqrt();
+                        let start_hue = self.get_rainbow_hue();
+                        let end_hue = start_hue + distance * self.rainbow_hue_step_per_pixel;
+                        (Some(self.rainbow_color_from_hue(start_hue)),
+                         Some(self.rainbow_color_from_hue(end_hue)))
+                    } else {
+                        (None, None)
+                    };
+                    Some(Shape::Line {
+                        x1: *start_x,
+                        y1: *start_y,
+                        x2: current_x,
+                        y2: current_y,
+                        color: self.current_color,
+                        thick: self.current_thickness,
+                        start_color,
+                        end_color,
+                    })
+                }
                 Tool::Rect => {
                     // Normalize rectangle to handle dragging in any direction
                     let (x, w) = if current_x >= *start_x {
@@ -59,6 +74,15 @@ impl InputState {
                     } else {
                         (current_y, start_y - current_y)
                     };
+                    let (start_color, end_color) = if self.rainbow_mode_enabled {
+                        let diagonal = ((w * w + h * h) as f64).sqrt();
+                        let start_hue = self.get_rainbow_hue();
+                        let end_hue = start_hue + diagonal * self.rainbow_hue_step_per_pixel;
+                        (Some(self.rainbow_color_from_hue(start_hue)),
+                         Some(self.rainbow_color_from_hue(end_hue)))
+                    } else {
+                        (None, None)
+                    };
                     Some(Shape::Rect {
                         x,
                         y,
@@ -67,11 +91,22 @@ impl InputState {
                         fill: self.fill_enabled,
                         color: self.current_color,
                         thick: self.current_thickness,
+                        start_color,
+                        end_color,
                     })
                 }
                 Tool::Ellipse => {
                     let (cx, cy, rx, ry) =
                         util::ellipse_bounds(*start_x, *start_y, current_x, current_y);
+                    let (start_color, end_color) = if self.rainbow_mode_enabled {
+                        let diameter = (rx * 2) as f64;
+                        let start_hue = self.get_rainbow_hue();
+                        let end_hue = start_hue + diameter * self.rainbow_hue_step_per_pixel;
+                        (Some(self.rainbow_color_from_hue(start_hue)),
+                         Some(self.rainbow_color_from_hue(end_hue)))
+                    } else {
+                        (None, None)
+                    };
                     Some(Shape::Ellipse {
                         cx,
                         cy,
@@ -80,18 +115,35 @@ impl InputState {
                         fill: self.fill_enabled,
                         color: self.current_color,
                         thick: self.current_thickness,
+                        start_color,
+                        end_color,
                     })
                 }
-                Tool::Arrow => Some(Shape::Arrow {
-                    x1: *start_x,
-                    y1: *start_y,
-                    x2: current_x,
-                    y2: current_y,
-                    color: self.current_color,
-                    thick: self.current_thickness,
-                    arrow_length: self.arrow_length,
-                    arrow_angle: self.arrow_angle,
-                }),
+                Tool::Arrow => {
+                    let (start_color, end_color) = if self.rainbow_mode_enabled {
+                        let dx = (current_x - *start_x) as f64;
+                        let dy = (current_y - *start_y) as f64;
+                        let distance = (dx * dx + dy * dy).sqrt();
+                        let start_hue = self.get_rainbow_hue();
+                        let end_hue = start_hue + distance * self.rainbow_hue_step_per_pixel;
+                        (Some(self.rainbow_color_from_hue(start_hue)),
+                         Some(self.rainbow_color_from_hue(end_hue)))
+                    } else {
+                        (None, None)
+                    };
+                    Some(Shape::Arrow {
+                        x1: *start_x,
+                        y1: *start_y,
+                        x2: current_x,
+                        y2: current_y,
+                        color: self.current_color,
+                        thick: self.current_thickness,
+                        arrow_length: self.arrow_length,
+                        arrow_angle: self.arrow_angle,
+                        start_color,
+                        end_color,
+                    })
+                }
                 Tool::Marker => Some(Shape::MarkerStroke {
                     points: points.clone(),
                     color: self.marker_color(),

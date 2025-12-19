@@ -222,6 +222,8 @@ impl InputState {
     /// * `show_status_bar` - Whether the status bar starts visible
     /// * `board_config` - Board mode configuration
     /// * `action_map` - Keybinding action map
+    /// * `rainbow_hue_step_per_pixel` - Hue increment per pixel in rainbow mode
+    /// * `rainbow_enabled` - Whether rainbow mode starts enabled
     #[allow(clippy::too_many_arguments)]
     pub fn with_defaults(
         color: Color,
@@ -246,14 +248,16 @@ impl InputState {
         custom_redo_delay_ms: u64,
         custom_undo_steps: usize,
         custom_redo_steps: usize,
+        rainbow_hue_step_per_pixel: f64,
+        rainbow_enabled: bool,
     ) -> Self {
         let clamped_eraser = eraser_size.clamp(MIN_STROKE_THICKNESS, MAX_STROKE_THICKNESS);
         let mut state = Self {
             canvas_set: CanvasSet::new(),
             current_color: color,
-            rainbow_mode_enabled: false,
+            rainbow_mode_enabled: rainbow_enabled,
             rainbow_hue: 0.0,
-            rainbow_hue_step_per_pixel: 0.1, // Default: increment hue by 0.15 degrees per pixel traveled
+            rainbow_hue_step_per_pixel,
             current_thickness: thickness,
             eraser_size: clamped_eraser,
             eraser_kind: EraserKind::Circle,

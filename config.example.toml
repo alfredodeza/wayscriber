@@ -72,6 +72,23 @@ font_style = "normal"
 # Default: false (no background, cleaner look with just stroke outline)
 text_background_enabled = false
 
+# ───────────────────────────────────────────────────────────────────────────────
+# Rainbow Mode Settings
+# ───────────────────────────────────────────────────────────────────────────────
+
+# Enable rainbow mode by default on startup
+# When enabled, all drawing (pen, marker, lines, rectangles, ellipses, arrows)
+# will use animated rainbow colors instead of the default color
+# This does NOT apply to text mode
+# Toggle rainbow mode with Ctrl+Shift+R (configurable in keybindings)
+default_rainbow_enabled = false
+
+# Rainbow mode hue step per pixel traveled (0.01 - 1.0)
+# Controls how fast colors transition when rainbow mode is enabled
+# Lower values = slower, more gradual color changes
+# Higher values = faster, more vibrant color transitions
+rainbow_hue_step_per_pixel = 0.1
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ARROW SETTINGS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -435,6 +452,9 @@ toggle_status_bar = ["F12", "F4"]
 
 # Toggle fill for rectangle/ellipse
 toggle_fill = []
+
+# Toggle rainbow color mode (animated rainbow colors while drawing)
+toggle_rainbow_mode = ["Ctrl+Shift+R"]
 
 # Toggle context menu (keyboard alternative to right-click)
 open_context_menu = ["Shift+F10", "Menu"]

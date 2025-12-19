@@ -85,7 +85,7 @@ pub fn render_selection_halo(ctx: &cairo::Context, drawn: &DrawnShape) {
             thick,
             ..
         } => {
-            render_line(ctx, *x1, *y1, *x2, *y2, glow, thick + outline_width);
+            render_line(ctx, *x1, *y1, *x2, *y2, glow, thick + outline_width, &None, &None);
         }
         Shape::Rect {
             x,
@@ -96,7 +96,7 @@ pub fn render_selection_halo(ctx: &cairo::Context, drawn: &DrawnShape) {
             fill,
             ..
         } => {
-            render_rect(ctx, *x, *y, *w, *h, *fill, glow, thick + outline_width);
+            render_rect(ctx, *x, *y, *w, *h, *fill, glow, thick + outline_width, &None, &None);
         }
         Shape::Ellipse {
             cx,
@@ -107,7 +107,7 @@ pub fn render_selection_halo(ctx: &cairo::Context, drawn: &DrawnShape) {
             thick,
             ..
         } => {
-            render_ellipse(ctx, *cx, *cy, *rx, *ry, *fill, glow, thick + outline_width);
+            render_ellipse(ctx, *cx, *cy, *rx, *ry, *fill, glow, thick + outline_width, &None, &None);
         }
         Shape::Arrow {
             x1,
@@ -129,6 +129,8 @@ pub fn render_selection_halo(ctx: &cairo::Context, drawn: &DrawnShape) {
                 thick + outline_width,
                 *arrow_length,
                 *arrow_angle,
+                &None,
+                &None,
             );
         }
         Shape::MarkerStroke { points, thick, .. } => {
@@ -183,8 +185,10 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
             y2,
             color,
             thick,
+            start_color,
+            end_color,
         } => {
-            render_line(ctx, *x1, *y1, *x2, *y2, *color, *thick);
+            render_line(ctx, *x1, *y1, *x2, *y2, *color, *thick, start_color, end_color);
         }
         Shape::Rect {
             x,
@@ -194,8 +198,10 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
             fill,
             color,
             thick,
+            start_color,
+            end_color,
         } => {
-            render_rect(ctx, *x, *y, *w, *h, *fill, *color, *thick);
+            render_rect(ctx, *x, *y, *w, *h, *fill, *color, *thick, start_color, end_color);
         }
         Shape::Ellipse {
             cx,
@@ -205,8 +211,10 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
             fill,
             color,
             thick,
+            start_color,
+            end_color,
         } => {
-            render_ellipse(ctx, *cx, *cy, *rx, *ry, *fill, *color, *thick);
+            render_ellipse(ctx, *cx, *cy, *rx, *ry, *fill, *color, *thick, start_color, end_color);
         }
         Shape::Arrow {
             x1,
@@ -217,6 +225,8 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
             thick,
             arrow_length,
             arrow_angle,
+            start_color,
+            end_color,
         } => {
             render_arrow(
                 ctx,
@@ -228,6 +238,8 @@ pub fn render_shape(ctx: &cairo::Context, shape: &Shape) {
                 *thick,
                 *arrow_length,
                 *arrow_angle,
+                start_color,
+                end_color,
             );
         }
         Shape::Text {
@@ -526,8 +538,26 @@ pub fn render_marker_stroke_borrowed(
 }
 
 /// Render a straight line
-fn render_line(ctx: &cairo::Context, x1: i32, y1: i32, x2: i32, y2: i32, color: Color, thick: f64) {
-    ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+fn render_line(
+    ctx: &cairo::Context,
+    x1: i32,
+    y1: i32,
+    x2: i32,
+    y2: i32,
+    color: Color,
+    thick: f64,
+    start_color: &Option<Color>,
+    end_color: &Option<Color>,
+) {
+    // Use gradient if both colors are present
+    if let (Some(start), Some(end)) = (start_color, end_color) {
+        let pattern = cairo::LinearGradient::new(x1 as f64, y1 as f64, x2 as f64, y2 as f64);
+        pattern.add_color_stop_rgba(0.0, start.r, start.g, start.b, start.a);
+        pattern.add_color_stop_rgba(1.0, end.r, end.g, end.b, end.a);
+        ctx.set_source(pattern).ok();
+    } else {
+        ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+    }
     ctx.set_line_width(thick);
     ctx.set_line_cap(cairo::LineCap::Round);
 
@@ -547,8 +577,23 @@ fn render_rect(
     fill: bool,
     color: Color,
     thick: f64,
+    start_color: &Option<Color>,
+    end_color: &Option<Color>,
 ) {
-    ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+    // Use gradient if both colors are present (diagonal gradient from top-left to bottom-right)
+    if let (Some(start), Some(end)) = (start_color, end_color) {
+        let pattern = cairo::LinearGradient::new(
+            x as f64,
+            y as f64,
+            (x + w) as f64,
+            (y + h) as f64,
+        );
+        pattern.add_color_stop_rgba(0.0, start.r, start.g, start.b, start.a);
+        pattern.add_color_stop_rgba(1.0, end.r, end.g, end.b, end.a);
+        ctx.set_source(pattern).ok();
+    } else {
+        ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+    }
     ctx.set_line_width(thick);
     ctx.set_line_join(cairo::LineJoin::Miter);
 
@@ -586,12 +631,27 @@ fn render_ellipse(
     fill: bool,
     color: Color,
     thick: f64,
+    start_color: &Option<Color>,
+    end_color: &Option<Color>,
 ) {
     if rx == 0 || ry == 0 {
         return;
     }
 
-    ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+    // Use gradient if both colors are present (horizontal gradient across the ellipse)
+    if let (Some(start), Some(end)) = (start_color, end_color) {
+        let pattern = cairo::LinearGradient::new(
+            (cx - rx) as f64,
+            cy as f64,
+            (cx + rx) as f64,
+            cy as f64,
+        );
+        pattern.add_color_stop_rgba(0.0, start.r, start.g, start.b, start.a);
+        pattern.add_color_stop_rgba(1.0, end.r, end.g, end.b, end.a);
+        ctx.set_source(pattern).ok();
+    } else {
+        ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+    }
     ctx.set_line_width(thick);
 
     ctx.save().ok();
@@ -621,15 +681,19 @@ fn render_arrow(
     thick: f64,
     arrow_length: f64,
     arrow_angle: f64,
+    start_color: &Option<Color>,
+    end_color: &Option<Color>,
 ) {
-    // Draw the main line
-    render_line(ctx, x1, y1, x2, y2, color, thick);
+    // Draw the main line with gradient
+    render_line(ctx, x1, y1, x2, y2, color, thick, start_color, end_color);
 
     // Draw arrowhead at (x1, y1) pointing towards start
     // Returns [left_point, right_point]
     let arrow_points = util::calculate_arrowhead_custom(x1, y1, x2, y2, arrow_length, arrow_angle);
 
-    ctx.set_source_rgba(color.r, color.g, color.b, color.a);
+    // Use end_color for arrowhead if gradient is present, otherwise use base color
+    let head_color = end_color.as_ref().unwrap_or(&color);
+    ctx.set_source_rgba(head_color.r, head_color.g, head_color.b, head_color.a);
     ctx.set_line_width(thick);
     ctx.set_line_cap(cairo::LineCap::Round);
 

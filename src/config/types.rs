@@ -65,6 +65,17 @@ pub struct DrawingConfig {
     /// Enable semi-transparent background box behind text for better contrast
     #[serde(default = "default_text_background")]
     pub text_background_enabled: bool,
+
+    /// Rainbow mode hue step per pixel traveled (0.01 - 1.0)
+    /// Controls how fast colors transition in rainbow mode.
+    /// Lower values = slower, more gradual color changes
+    /// Higher values = faster, more vibrant color transitions
+    #[serde(default = "default_rainbow_hue_step")]
+    pub rainbow_hue_step_per_pixel: f64,
+
+    /// Enable rainbow mode by default on startup
+    #[serde(default = "default_rainbow_enabled")]
+    pub default_rainbow_enabled: bool,
 }
 
 impl Default for DrawingConfig {
@@ -83,6 +94,8 @@ impl Default for DrawingConfig {
             font_weight: default_font_weight(),
             font_style: default_font_style(),
             text_background_enabled: default_text_background(),
+            rainbow_hue_step_per_pixel: default_rainbow_hue_step(),
+            default_rainbow_enabled: default_rainbow_enabled(),
         }
     }
 }
@@ -487,6 +500,14 @@ fn default_font_style() -> String {
 }
 
 fn default_text_background() -> bool {
+    false
+}
+
+fn default_rainbow_hue_step() -> f64 {
+    0.1
+}
+
+fn default_rainbow_enabled() -> bool {
     false
 }
 

@@ -230,7 +230,24 @@ impl InputState {
         Color::from_hsv(hue, 1.0, 1.0, 1.0)
     }
 
+    /// Get the current rainbow hue position.
+    pub fn get_rainbow_hue(&self) -> f64 {
+        self.rainbow_hue
+    }
+
+    /// Generate a rainbow color from a hue value (0-360 degrees).
+    pub fn rainbow_color_from_hue(&self, hue: f64) -> Color {
+        Color::from_hsv(hue % 360.0, 1.0, 1.0, 1.0)
+    }
+
+    /// Update the rainbow hue position by adding a distance offset.
+    /// This allows continuous rainbow progression across multiple shapes.
+    pub fn advance_rainbow_hue(&mut self, distance: f64) {
+        self.rainbow_hue = (self.rainbow_hue + distance * self.rainbow_hue_step_per_pixel) % 360.0;
+    }
+
     /// Generates colors for each point based on cumulative distance traveled.
+    /// Starts from the current rainbow_hue position for continuous rainbow across shapes.
     pub fn generate_rainbow_colors_for_points(&self, points: &[(i32, i32)]) -> Vec<Color> {
         if points.is_empty() {
             return Vec::new();
@@ -239,8 +256,8 @@ impl InputState {
         let mut colors = Vec::with_capacity(points.len());
         let mut cumulative_distance = 0.0;
 
-        // First point gets the starting hue
-        colors.push(self.rainbow_color_at_distance(cumulative_distance));
+        // First point starts at current rainbow hue position
+        colors.push(self.rainbow_color_from_hue(self.rainbow_hue));
 
         // For each subsequent point, calculate distance from previous point
         for i in 1..points.len() {
@@ -251,7 +268,8 @@ impl InputState {
             let distance = (dx * dx + dy * dy).sqrt();
             cumulative_distance += distance;
 
-            colors.push(self.rainbow_color_at_distance(cumulative_distance));
+            let hue = self.rainbow_hue + cumulative_distance * self.rainbow_hue_step_per_pixel;
+            colors.push(self.rainbow_color_from_hue(hue));
         }
 
         log::debug!("Generated {} rainbow colors for {} points, total distance: {}",

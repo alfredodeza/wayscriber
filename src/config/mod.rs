@@ -567,6 +567,16 @@ impl Config {
             self.drawing.font_style = "normal".to_string();
         }
 
+        // Validate rainbow hue step per pixel: 0.01 - 1.0
+        if !(0.01..=1.0).contains(&self.drawing.rainbow_hue_step_per_pixel) {
+            log::warn!(
+                "Invalid rainbow_hue_step_per_pixel {:.3}, clamping to 0.01-1.0 range",
+                self.drawing.rainbow_hue_step_per_pixel
+            );
+            self.drawing.rainbow_hue_step_per_pixel =
+                self.drawing.rainbow_hue_step_per_pixel.clamp(0.01, 1.0);
+        }
+
         // Validate board mode default
         if !matches!(
             self.board.default_mode.to_lowercase().as_str(),
